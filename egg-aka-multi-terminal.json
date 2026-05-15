@@ -1,0 +1,53 @@
+{
+    "_comment": "DO NOT EDIT: FILE GENERATED AUTOMATICALLY BY AKA MULTI TERMINAL",
+    "meta": {
+        "version": "PTDL_v2",
+        "update_url": "https://raw.githubusercontent.com/akaanakbaik/egg-multi-terminal/main/egg-aka-multi-terminal.json"
+    },
+    "exported_at": "2026-05-15T00:00:00+07:00",
+    "name": "Aka Multi Terminal",
+    "author": "akaanakbaik17@proton.me",
+    "description": "Egg Pterodactyl multi terminal untuk menjalankan bot, web server, script Node.js, Python, PHP, C/C++, Java, Go, Bun, Deno, PM2, dan Cloudflare Tunnel. Default masuk ke shell interaktif berwarna dengan info versi runtime.",
+    "features": null,
+    "docker_images": {
+        "Aka Multi Terminal - Nightly": "ghcr.io/akaanakbaik/egg-multi-terminal:nightly",
+        "Aka Multi Terminal - Latest": "ghcr.io/akaanakbaik/egg-multi-terminal:latest"
+    },
+    "file_denylist": [],
+    "startup": "/usr/local/bin/aka-entrypoint",
+    "config": {
+        "files": "{}",
+        "startup": "{\n    \"done\": \"AKA_MULTI_TERMINAL_READY\"\n}",
+        "logs": "{}",
+        "stop": "exit"
+    },
+    "scripts": {
+        "installation": {
+            "script": "#!/bin/bash\nmkdir -p /mnt/server\ncd /mnt/server\necho \"Aka Multi Terminal siap. Upload file bot/web kamu ke File Manager, lalu jalankan command dari console.\"\n",
+            "container": "ubuntu:24.04",
+            "entrypoint": "bash"
+        }
+    },
+    "variables": [
+        {
+            "name": "Startup Command",
+            "description": "Command yang dijalankan saat server start. Isi bash untuk terminal interaktif. Contoh: npm start, node index.js, python3 main.py, pm2-runtime start ecosystem.config.js, php artisan serve --host=0.0.0.0 --port={{SERVER_PORT}}",
+            "env_variable": "STARTUP_CMD",
+            "default_value": "bash",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string|max:4096",
+            "field_type": "text"
+        },
+        {
+            "name": "Show Runtime Info",
+            "description": "Tampilkan banner berwarna dan daftar versi runtime saat container start. Isi 1 untuk tampil, 0 untuk sembunyikan.",
+            "env_variable": "AKA_SHOW_INFO",
+            "default_value": "1",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|boolean",
+            "field_type": "text"
+        }
+    ]
+}
