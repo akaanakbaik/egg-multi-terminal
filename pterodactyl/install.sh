@@ -1,108 +1,171 @@
 #!/bin/bash
-set -e
+set -Eeuo pipefail
 
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-CYAN='\033[0;36m'
-NC='\033[0m'
-
-log() { echo -e "${CYAN}[aka-installer]${NC} $1"; }
-warn() { echo -e "${YELLOW}[aka-installer]${NC} $1"; }
-
-echo "================================================"
-echo "        AKA MULTI TERMINAL INSTALLATION"
-echo "================================================"
-
-apt-get update
-apt-get install -y git curl jq file unzip make gcc g++ python3 python3-pip ca-certificates
-
+LOG_FILE=/mnt/server/install.log
 mkdir -p /mnt/server
+touch "$LOG_FILE"
+exec > >(tee -a "$LOG_FILE") 2>&1
+
+BOLD='\033[1m'
+DIM='\033[2m'
+RED='\033[31m'
+GREEN='\033[32m'
+YELLOW='\033[33m'
+BLUE='\033[34m'
+MAGENTA='\033[35m'
+CYAN='\033[36m'
+RESET='\033[0m'
+TOTAL=9
+STEP=0
+
+bar() {
+  local p="$1" w=24 f e out=""
+  f=$((p*w/100)); e=$((w-f))
+  for ((i=0;i<f;i++)); do out+="█"; done
+  for ((i=0;i<e;i++)); do out+="░"; done
+  printf "%s" "$out"
+}
+
+banner() {
+  clear 2>/dev/null || true
+  echo -e "${MAGENTA}╔════════════════════════════════════════════════════════════╗${RESET}"
+  echo -e "${MAGENTA}║${RESET} ${BOLD}${CYAN}AKA MULTI TERMINAL INSTALLER${RESET} ${DIM}for Pterodactyl${RESET}              ${MAGENTA}║${RESET}"
+  echo -e "${MAGENTA}╚════════════════════════════════════════════════════════════╝${RESET}"
+  echo -e "${YELLOW}Image${RESET}      ghcr.io/akaanakbaik/egg-multi-terminal:nightly"
+  echo -e "${YELLOW}Workdir${RESET}    /mnt/server"
+  echo -e "${YELLOW}Log file${RESET}   $LOG_FILE"
+  echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
+}
+
+step() {
+  STEP=$((STEP+1))
+  local p=$((STEP*100/TOTAL))
+  echo -e "${BLUE}[${STEP}/${TOTAL}]${RESET} $1"
+  echo -e "    ${GREEN}$(bar "$p")${RESET} ${p}%"
+}
+
+ok() { echo -e "    ${GREEN}✓${RESET} $1"; }
+warn() { echo -e "    ${YELLOW}⚠${RESET} $1"; }
+
+fail() {
+  code=$?
+  echo
+  echo -e "${RED}╔════════════════════════════════════════════════════════════╗${RESET}"
+  echo -e "${RED}║ INSTALLATION FAILED                                        ║${RESET}"
+  echo -e "${RED}╚════════════════════════════════════════════════════════════╝${RESET}"
+  echo -e "${YELLOW}Exit code:${RESET} $code"
+  echo -e "${YELLOW}Log file:${RESET} $LOG_FILE"
+  echo -e "${CYAN}Last log:${RESET}"
+  tail -80 "$LOG_FILE" || true
+  exit "$code"
+}
+trap fail ERR
+
+soft() { "$@" || warn "Gagal tapi dilanjutkan: $*"; }
+
+banner
+
+step "Preparing workspace"
 cd /mnt/server
+ok "Workspace ready"
 
-if [ "${USER_UPLOAD}" = "true" ] || [ "${USER_UPLOAD}" = "1" ]; then
-    log "User upload mode aktif. Git clone dilewati."
-    log "Upload file lewat SFTP/File Manager Pterodactyl."
-    exit 0
+step "Installing base installer packages"
+export DEBIAN_FRONTEND=noninteractive
+apt-get update -y
+apt-get install -y git curl jq file unzip make gcc g++ python3 python3-pip ca-certificates
+ok "Base packages ready"
+
+step "Reading install variables"
+echo -e "    ${YELLOW}USER_UPLOAD${RESET}=${USER_UPLOAD:-false}"
+echo -e "    ${YELLOW}GIT_ADDRESS${RESET}=${GIT_ADDRESS:-empty}"
+echo -e "    ${YELLOW}BRANCH${RESET}=${BRANCH:-default}"
+echo -e "    ${YELLOW}AUTO_INSTALL_ON_START${RESET}=${AUTO_INSTALL_ON_START:-false}"
+ok "Variables loaded"
+
+step "Checking deployment mode"
+GIT_MODE=skip
+if [ "${USER_UPLOAD:-false}" = "true" ] || [ "${USER_UPLOAD:-false}" = "1" ]; then
+  ok "Manual upload mode enabled"
+elif [ -z "${GIT_ADDRESS:-}" ]; then
+  ok "No git repository set. Terminal-only mode enabled"
+else
+  GIT_MODE=clone
+  ok "Git deployment mode enabled"
 fi
 
-if [ -z "${GIT_ADDRESS}" ]; then
-    log "GIT_ADDRESS kosong. Server siap untuk terminal-only atau upload manual."
-    exit 0
-fi
-
-case "${GIT_ADDRESS}" in
-    *.git) true ;;
-    *) GIT_ADDRESS="${GIT_ADDRESS}.git" ;;
-esac
-
-if [ -n "${USERNAME}" ] && [ -n "${ACCESS_TOKEN}" ]; then
-    log "Menggunakan git private authentication."
+step "Syncing repository"
+if [ "$GIT_MODE" = "clone" ]; then
+  case "${GIT_ADDRESS}" in *.git) true ;; *) GIT_ADDRESS="${GIT_ADDRESS}.git" ;; esac
+  if [ -n "${USERNAME:-}" ] && [ -n "${ACCESS_TOKEN:-}" ]; then
+    warn "Private git authentication enabled"
     GIT_HOST_PATH="$(echo "${GIT_ADDRESS}" | sed -E 's#https?://##')"
     GIT_ADDRESS="https://${USERNAME}:${ACCESS_TOKEN}@${GIT_HOST_PATH}"
-fi
-
-if [ "$(ls -A /mnt/server 2>/dev/null)" ]; then
-    log "Folder tidak kosong. Mengecek repository lama."
+  fi
+  if [ "$(ls -A /mnt/server 2>/dev/null)" ]; then
     if [ -d .git ]; then
-        ORIGIN="$(git config --get remote.origin.url 2>/dev/null || true)"
-        if [ -n "${ORIGIN}" ]; then
-            log "Repository ditemukan. Menarik update branch ${BRANCH:-default}."
-            git fetch --all || true
-            if [ -n "${BRANCH}" ]; then
-                git checkout "${BRANCH}" || true
-                git pull origin "${BRANCH}" || true
-            else
-                git pull || true
-            fi
-        fi
+      ok "Existing git repository found"
+      soft git fetch --all
+      if [ -n "${BRANCH:-}" ]; then soft git checkout "${BRANCH}"; soft git pull origin "${BRANCH}"; else soft git pull; fi
     else
-        warn "Folder sudah ada isi dan bukan git repo. Clone dilewati agar data tidak hilang."
+      warn "Folder not empty and not a git repository. Clone skipped to protect files"
     fi
+  else
+    if [ -n "${BRANCH:-}" ]; then soft git clone --single-branch --branch "${BRANCH}" "${GIT_ADDRESS}" .; else soft git clone "${GIT_ADDRESS}" .; fi
+  fi
 else
-    log "Cloning repository: ${GIT_ADDRESS}"
-    if [ -n "${BRANCH}" ]; then
-        git clone --single-branch --branch "${BRANCH}" "${GIT_ADDRESS}" . || warn "Git clone gagal, lanjut terminal-only."
-    else
-        git clone "${GIT_ADDRESS}" . || warn "Git clone gagal, lanjut terminal-only."
-    fi
+  ok "Repository sync skipped"
 fi
 
-if [ "${AUTO_INSTALL_ON_START}" = "true" ] || [ "${AUTO_INSTALL_ON_START}" = "1" ]; then
-    log "AUTO_INSTALL_ON_START aktif saat runtime. Dependency akan dicek ulang ketika server start."
-fi
+step "Detecting project type"
+PROJECTS=()
+[ -f package.json ] && PROJECTS+=("Node.js")
+[ -f requirements.txt ] && PROJECTS+=("Python")
+[ -f go.mod ] && PROJECTS+=("Go")
+[ -f composer.json ] && PROJECTS+=("PHP")
+[ -f Gemfile ] && PROJECTS+=("Ruby")
+if [ "${#PROJECTS[@]}" -gt 0 ]; then echo -e "    ${GREEN}Detected:${RESET} ${PROJECTS[*]}"; else echo -e "    ${DIM}No dependency manifest detected. Terminal-only is okay.${RESET}"; fi
+ok "Project scan complete"
 
+step "Installing detected dependencies"
 if [ -f package.json ]; then
-    log "package.json terdeteksi. Install dependency Node."
-    if [ -f pnpm-lock.yaml ] && command -v pnpm >/dev/null 2>&1; then
-        pnpm install --prod || npm install --omit=dev || true
-    elif [ -f yarn.lock ] && command -v yarn >/dev/null 2>&1; then
-        yarn install --production || npm install --omit=dev || true
-    elif [ -f bun.lockb ] && command -v bun >/dev/null 2>&1; then
-        bun install --production || npm install --omit=dev || true
-    else
-        npm install --omit=dev || npm install --production || true
-    fi
+  if [ -f pnpm-lock.yaml ] && command -v pnpm >/dev/null 2>&1; then soft pnpm install --prod;
+  elif [ -f yarn.lock ] && command -v yarn >/dev/null 2>&1; then soft yarn install --production;
+  elif { [ -f bun.lockb ] || [ -f bun.lock ]; } && command -v bun >/dev/null 2>&1; then soft bun install --production;
+  else soft npm install --omit=dev; fi
 fi
+[ -f requirements.txt ] && soft python3 -m pip install --break-system-packages -r requirements.txt
+[ -f go.mod ] && soft go mod download
+[ -f composer.json ] && soft composer install --no-dev --no-interaction
+[ -f Gemfile ] && command -v bundle >/dev/null 2>&1 && soft bundle install
+ok "Dependency phase complete"
 
-if [ -f requirements.txt ]; then
-    log "requirements.txt terdeteksi. Install dependency Python."
-    python3 -m pip install --break-system-packages -r requirements.txt || true
-fi
+step "Finalizing permissions and hints"
+chmod -R u+rwX /mnt/server || true
+cat > /mnt/server/.aka-terminal-hints <<'HINTS'
+Aka Multi Terminal ready.
+Useful commands:
+- aka-info
+- aka-help
+- rootsh
+- n18 / n20 / n22 / nlatest
+- tail -f cloudflared.log
+HINTS
+ok "Hints written"
 
-if [ -f go.mod ]; then
-    log "go.mod terdeteksi. Download dependency Go."
-    go mod download || true
-fi
-
-if [ -f composer.json ]; then
-    log "composer.json terdeteksi. Install dependency PHP."
-    composer install --no-dev --no-interaction || composer install --no-interaction || true
-fi
-
-echo "================================================"
-echo -e "${GREEN}        AKA MULTI TERMINAL READY${NC}"
-echo "================================================"
-echo "Startup bisa pakai: bash, auto, node index.js, npm start, python3 main.py, php -S, atau pm2-runtime."
-echo "Cloudflare Tunnel bisa diaktifkan via ENABLE_CF_TUNNEL + CF_TOKEN atau CF_URL."
-echo "================================================"
+step "Building final dashboard"
+echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
+echo -e "${BOLD}${GREEN}INSTALLATION COMPLETE${RESET}"
+echo -e "${YELLOW}Startup examples:${RESET}"
+echo "  bash"
+echo "  auto"
+echo "  node index.js"
+echo "  npm start"
+echo "  pm2-runtime start ecosystem.config.js"
+echo "  python3 main.py"
+echo "  php artisan serve --host=0.0.0.0 --port=\${SERVER_PORT}"
+echo -e "${YELLOW}Cloudflare Tunnel:${RESET} ENABLE_CF_TUNNEL=true + CF_TOKEN or CF_URL"
+echo -e "${YELLOW}Command shell:${RESET} container@<docker-id>:/home/container$"
+echo -e "${YELLOW}Root shell:${RESET} ketik rootsh untuk root@<docker-id>:/home/container#"
+echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
+echo -e "${GREEN}AKA_MULTI_TERMINAL_INSTALL_READY${RESET}"
 exit 0
