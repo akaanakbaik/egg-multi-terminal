@@ -7,6 +7,7 @@ ENV HOME=/home/container
 ENV TERM=xterm-256color
 ENV NVM_DIR=/usr/local/nvm
 ENV PIP_BREAK_SYSTEM_PACKAGES=1
+ENV PATH=/opt/pytools/bin:${PATH}
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
@@ -117,9 +118,9 @@ RUN mkdir -p "${NVM_DIR}" \
        done \
     && npm cache clean --force
 
-RUN python3 -m pip install --no-cache-dir --break-system-packages --upgrade pip setuptools wheel virtualenv \
-    && python3 -m pip install --no-cache-dir --break-system-packages pipenv poetry uv yt-dlp requests aiohttp flask fastapi uvicorn gunicorn rich click \
-    && pipx ensurepath
+RUN python3 -m venv /opt/pytools \
+    && /opt/pytools/bin/python -m pip install --no-cache-dir --upgrade pip setuptools wheel virtualenv \
+    && /opt/pytools/bin/python -m pip install --no-cache-dir pipenv poetry uv yt-dlp requests aiohttp flask fastapi uvicorn gunicorn rich click
 
 RUN curl -fsSL https://getcomposer.org/installer -o /tmp/composer-setup.php \
     && php /tmp/composer-setup.php --install-dir=/usr/local/bin --filename=composer \
