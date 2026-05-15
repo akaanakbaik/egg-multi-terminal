@@ -6,8 +6,9 @@ ENV USER=container
 ENV HOME=/home/container
 ENV TERM=xterm-256color
 ENV NVM_DIR=/usr/local/nvm
+ENV BUN_INSTALL=/usr/local/bun
 ENV PIP_BREAK_SYSTEM_PACKAGES=1
-ENV PATH=/opt/pytools/bin:${PATH}
+ENV PATH=/opt/pytools/bin:/usr/local/bun/bin:${PATH}
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
@@ -135,35 +136,41 @@ RUN ARCH="$(dpkg --print-architecture)" \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-RUN curl -fsSL https://bun.sh/install | bash \
-    && ln -sf /root/.bun/bin/bun /usr/local/bin/bun \
-    && ln -sf /root/.bun/bin/bunx /usr/local/bin/bunx
+RUN mkdir -p "${BUN_INSTALL}" \
+    && curl -fsSL https://bun.sh/install | bash \
+    && chmod -R a+rx "${BUN_INSTALL}" \
+    && ln -sf "${BUN_INSTALL}/bin/bun" /usr/local/bin/bun \
+    && ln -sf "${BUN_INSTALL}/bin/bunx" /usr/local/bin/bunx
 
 RUN curl -fsSL https://deno.land/install.sh | DENO_INSTALL=/usr/local sh \
     && ln -sf /usr/local/bin/deno /usr/bin/deno
 
 RUN set -eux; \
+    install -d -m 0755 /home/container; \
     if getent group container >/dev/null; then \
-      true; \
+      CONTAINER_GROUP=container; \
     elif getent group 1000 >/dev/null; then \
       OLD_GROUP="$(getent group 1000 | cut -d: -f1)"; \
-      groupmod -n container "${OLD_GROUP}"; \
+      groupmod -n container "${OLD_GROUP}" || true; \
+      CONTAINER_GROUP=container; \
     else \
-      groupadd -g 1000 container; \
+      groupadd -g 1000 container || groupadd container; \
+      CONTAINER_GROUP=container; \
     fi; \
     if id -u container >/dev/null 2>&1; then \
-      usermod -d /home/container -s /bin/bash -g container container; \
+      usermod -d /home/container -s /bin/bash -g "${CONTAINER_GROUP}" container || true; \
     elif getent passwd 1000 >/dev/null; then \
       OLD_USER="$(getent passwd 1000 | cut -d: -f1)"; \
-      usermod -l container "${OLD_USER}"; \
-      usermod -d /home/container -m -s /bin/bash -g container container; \
+      usermod -l container "${OLD_USER}" || true; \
+      usermod -d /home/container -s /bin/bash -g "${CONTAINER_GROUP}" container || true; \
     else \
-      useradd -m -u 1000 -g container -s /bin/bash container; \
+      useradd -m -u 1000 -g "${CONTAINER_GROUP}" -s /bin/bash container || useradd -m -g "${CONTAINER_GROUP}" -s /bin/bash container; \
     fi; \
+    usermod -d /home/container -s /bin/bash -g "${CONTAINER_GROUP}" container || true; \
     echo "container ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/container; \
     chmod 0440 /etc/sudoers.d/container; \
-    mkdir -p /home/container; \
-    chown -R container:container /home/container /usr/local/nvm /opt/pytools
+    install -d -o container -g "${CONTAINER_GROUP}" -m 0755 /home/container; \
+    chown -R container:"${CONTAINER_GROUP}" /home/container /usr/local/nvm /opt/pytools /usr/local/bun || true
 
 COPY scripts/aka-runtime.sh /etc/profile.d/aka-runtime.sh
 COPY scripts/aka-info /usr/local/bin/aka-info
