@@ -12,60 +12,107 @@ CYAN=$'\033[36m'
 WHITE=$'\033[37m'
 RESET=$'\033[0m'
 
-hr() {
-  printf "%b\n" "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
-}
-
-ver() {
-  local name="$1"
-  shift
+hr() { printf "%b\n" "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"; }
+line() { printf "%b%-18s%b %s\n" "${YELLOW}" "$1" "${RESET}" "$2"; }
+cmdver() {
+  local name="$1"; shift
   local value
   value="$("$@" 2>&1 | head -n 1)"
-  if [[ -n "$value" ]]; then
-    printf "%b%-14s%b %s\n" "${YELLOW}" "$name" "${RESET}" "$value"
-  else
-    printf "%b%-14s%b tidak tersedia\n" "${YELLOW}" "$name" "${RESET}"
-  fi
+  if [[ -n "$value" ]]; then line "$name" "$value"; else line "$name" "tidak tersedia"; fi
+}
+filever() {
+  local name="$1" path="$2"
+  if [[ -e "$path" ]]; then line "$name" "tersedia: $path"; else line "$name" "tidak tersedia"; fi
 }
 
 clear 2>/dev/null || true
-printf "%b\n" "${MAGENTA}╔══════════════════════════════════════════════════════════╗${RESET}"
-printf "%b\n" "${MAGENTA}║${RESET} ${BOLD}${CYAN}AKA MULTI TERMINAL FOR PTERODACTYL${RESET} ${DIM}by aka${RESET}          ${MAGENTA}║${RESET}"
-printf "%b\n" "${MAGENTA}╚══════════════════════════════════════════════════════════╝${RESET}"
-printf "%bOwner%b      aka <akaanakbaik17@proton.me>\n" "${YELLOW}" "${RESET}"
-printf "%bImage%b      ghcr.io/akaanakbaik/egg-multi-terminal:nightly\n" "${YELLOW}" "${RESET}"
-printf "%bWorkdir%b    %s\n" "${YELLOW}" "${RESET}" "$(pwd)"
-printf "%bUser%b       %s\n" "${YELLOW}" "${RESET}" "$(whoami)"
+printf "%b\n" "${MAGENTA}╔════════════════════════════════════════════════════════════╗${RESET}"
+printf "%b\n" "${MAGENTA}║${RESET} ${BOLD}${CYAN}AKA MULTI TERMINAL DASHBOARD${RESET} ${DIM}Pterodactyl Runtime${RESET}          ${MAGENTA}║${RESET}"
+printf "%b\n" "${MAGENTA}╚════════════════════════════════════════════════════════════╝${RESET}"
+line "Owner" "aka <akaanakbaik17@proton.me>"
+line "Image" "ghcr.io/akaanakbaik/egg-multi-terminal:nightly"
+line "Hostname" "$(hostname 2>/dev/null || echo unknown)"
+line "User" "$(whoami 2>/dev/null || echo unknown) uid=$(id -u 2>/dev/null || echo '?')"
+line "Workdir" "$(pwd)"
+line "Home" "${HOME:-unknown}"
+line "Shell" "${SHELL:-/bin/bash}"
+line "Time" "$(date 2>/dev/null || echo unknown)"
+hr
+printf "%bSystem%b\n" "${GREEN}" "${RESET}"
+cmdver "OS" bash -lc 'source /etc/os-release 2>/dev/null && echo "$PRETTY_NAME" || uname -a'
+cmdver "Kernel" uname -r
+cmdver "CPU arch" uname -m
+cmdver "Memory" bash -lc "free -h 2>/dev/null | awk '/Mem:/ {print \$2 \" total, \" \$7 \" available\"}'"
+cmdver "Disk" bash -lc "df -h /home/container 2>/dev/null | awk 'NR==2 {print \$2 \" total, \" \$4 \" free\"}'"
 hr
 
 if [[ -s /usr/local/nvm/nvm.sh ]]; then
   source /usr/local/nvm/nvm.sh
-  printf "%bNode NVM%b\n" "${GREEN}" "${RESET}"
-  nvm ls --no-colors | sed 's/^/  /' | head -n 12
+  printf "%bNode.js via NVM%b\n" "${GREEN}" "${RESET}"
+  nvm ls --no-colors 2>/dev/null | sed 's/^/  /' | head -n 16
+  hr
 fi
 
+printf "%bRuntime Versions%b\n" "${GREEN}" "${RESET}"
+cmdver "Node" node -v
+cmdver "NPM" npm -v
+cmdver "PNPM" pnpm -v
+cmdver "Yarn" yarn -v
+cmdver "PM2" pm2 -v
+cmdver "Nodemon" nodemon -v
+cmdver "TypeScript" tsc -v
+cmdver "Vite" vite -v
+cmdver "Python" python3 --version
+cmdver "PIP" pip --version
+cmdver "UV" uv --version
+cmdver "Poetry" poetry --version
+cmdver "Pipenv" pipenv --version
+cmdver "PHP" php -v
+cmdver "Composer" composer --version
+cmdver "GCC" gcc --version
+cmdver "G++" g++ --version
+cmdver "Clang" clang --version
+cmdver "CMake" cmake --version
+cmdver "Java" java -version
+cmdver "Go" go version
+cmdver "Bun" bun --version
+cmdver "Deno" deno --version
+cmdver "Cloudflared" cloudflared --version
+cmdver "FFmpeg" ffmpeg -version
+cmdver "ImageMagick" magick -version
+cmdver "Git" git --version
 hr
-ver "Node" node -v
-ver "NPM" npm -v
-ver "PM2" pm2 -v
-ver "Python" python3 --version
-ver "PIP" pip3 --version
-ver "PHP" php -v
-ver "Composer" composer --version
-ver "G++" g++ --version
-ver "Clang++" clang++ --version
-ver "Java" java -version
-ver "Go" go version
-ver "Bun" bun --version
-ver "Deno" deno --version
-ver "Cloudflared" cloudflared --version
-ver "Git" git --version
+printf "%bDatabase / Network Tools%b\n" "${GREEN}" "${RESET}"
+cmdver "SQLite" sqlite3 --version
+cmdver "Redis CLI" redis-cli --version
+cmdver "Postgres CLI" psql --version
+cmdver "MySQL CLI" mysql --version
+cmdver "Curl" curl --version
+cmdver "Wget" wget --version
+cmdver "JQ" jq --version
+cmdver "YQ" yq --version
+cmdver "TMUX" tmux -V
+cmdver "Screen" screen --version
 hr
-printf "%bCommand cepat%b\n" "${GREEN}" "${RESET}"
-printf "  %bn18 / n20 / n22 / nlatest%b  ganti versi Node di shell aktif\n" "${CYAN}" "${RESET}"
-printf "  %bnode18 app.js%b              jalanin file dengan Node 18\n" "${CYAN}" "${RESET}"
-printf "  %bpm2 start index.js%b         run bot/web background\n" "${CYAN}" "${RESET}"
-printf "  %bcloudflared tunnel --url http://localhost:3000%b\n" "${CYAN}" "${RESET}"
-printf "  %baka-help%b                   lihat contoh command\n" "${CYAN}" "${RESET}"
+printf "%bStartup Variables%b\n" "${GREEN}" "${RESET}"
+line "STARTUP_CMD" "${STARTUP_CMD:-bash}"
+line "NODE_VERSION" "${NODE_VERSION:-default}"
+line "APP_PORT" "${APP_PORT:-${SERVER_PORT:-not set}}"
+line "AUTO_INSTALL" "${AUTO_INSTALL_ON_START:-false}"
+line "CF Tunnel" "${ENABLE_CF_TUNNEL:-false}"
+line "CF URL" "${CF_URL:-auto}"
+hr
+printf "%bCommand bebas%b\n" "${GREEN}" "${RESET}"
+printf "  %baka-info / dash%b          tampilkan dashboard ini\n" "${CYAN}" "${RESET}"
+printf "  %baka-help%b                 bantuan command\n" "${CYAN}" "${RESET}"
+printf "  %brootsh%b                   masuk root shell di dalam container\n" "${CYAN}" "${RESET}"
+printf "  %bn18 / n20 / n22 / nlatest%b ganti versi Node di shell aktif\n" "${CYAN}" "${RESET}"
+printf "  %bnode18 app.js%b            jalankan Node 18\n" "${CYAN}" "${RESET}"
+printf "  %bports%b                    lihat port aktif\n" "${CYAN}" "${RESET}"
+printf "  %btail -f cloudflared.log%b  log Cloudflare Tunnel\n" "${CYAN}" "${RESET}"
+hr
+printf "%bPrompt info%b\n" "${GREEN}" "${RESET}"
+printf "  User biasa: %bcontainer@$(hostname):/home/container$%b\n" "${CYAN}" "${RESET}"
+printf "  Root shell:  %broot@$(hostname):/home/container#%b\n" "${RED}" "${RESET}"
 hr
 printf "%bAKA_MULTI_TERMINAL_READY%b\n" "${GREEN}" "${RESET}"
