@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+set +e
+printf '\033[1;36mAka Multi Terminal Help\033[0m\n\n'
+printf 'Runtimes tersedia:\n'
+printf '- Node.js 18, 20, 22, latest via NVM\n'
+printf '- Python 3, pip, venv, uv, pipenv, poetry\n'
+printf '- PHP CLI dan Composer\n'
+printf '- GCC, G++, Clang, CMake, Make\n'
+printf '- PM2, pnpm, yarn, vite, ts-node, TypeScript\n'
+printf '- cloudflared untuk Cloudflare Tunnel\n'
+printf '- Git, curl, wget, jq, yq, tmux, screen, ffmpeg, Go, Bun, Deno, Java\n\n'
+printf 'Shortcut shell:\n'
+printf '- n18, n20, n22, nlatest\n'
+printf '- versions atau aka-info\n'
+printf '- helpaka atau aka-help\n'
