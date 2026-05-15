@@ -117,8 +117,8 @@ RUN mkdir -p "${NVM_DIR}" \
        done \
     && npm cache clean --force
 
-RUN python3 -m pip install --no-cache-dir --upgrade pip setuptools wheel virtualenv \
-    && python3 -m pip install --no-cache-dir pipenv poetry uv yt-dlp requests aiohttp flask fastapi uvicorn gunicorn rich click \
+RUN python3 -m pip install --no-cache-dir --break-system-packages --upgrade pip setuptools wheel virtualenv \
+    && python3 -m pip install --no-cache-dir --break-system-packages pipenv poetry uv yt-dlp requests aiohttp flask fastapi uvicorn gunicorn rich click \
     && pipx ensurepath
 
 RUN curl -fsSL https://getcomposer.org/installer -o /tmp/composer-setup.php \
