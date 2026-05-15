@@ -80,12 +80,12 @@
         },
         {
             "name": "Application Port",
-            "description": "Port aplikasi di dalam container untuk auto startup dan tunnel quick URL.",
+            "description": "Port aplikasi di dalam container untuk auto startup dan tunnel quick URL. Boleh pakai angka seperti 3000 atau template Pterodactyl seperti {{SERVER_PORT}}.",
             "env_variable": "APP_PORT",
             "default_value": "{{SERVER_PORT}}",
             "user_viewable": true,
             "user_editable": true,
-            "rules": "nullable|string|max:10",
+            "rules": "nullable|string|max:64",
             "field_type": "text"
         },
         {
