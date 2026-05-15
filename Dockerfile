@@ -142,12 +142,28 @@ RUN curl -fsSL https://bun.sh/install | bash \
 RUN curl -fsSL https://deno.land/install.sh | DENO_INSTALL=/usr/local sh \
     && ln -sf /usr/local/bin/deno /usr/bin/deno
 
-RUN groupadd -g 1000 container \
-    && useradd -m -u 1000 -g container -s /bin/bash container \
-    && echo "container ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/container \
-    && chmod 0440 /etc/sudoers.d/container \
-    && mkdir -p /home/container \
-    && chown -R container:container /home/container /usr/local/nvm
+RUN set -eux; \
+    if getent group container >/dev/null; then \
+      true; \
+    elif getent group 1000 >/dev/null; then \
+      OLD_GROUP="$(getent group 1000 | cut -d: -f1)"; \
+      groupmod -n container "${OLD_GROUP}"; \
+    else \
+      groupadd -g 1000 container; \
+    fi; \
+    if id -u container >/dev/null 2>&1; then \
+      usermod -d /home/container -s /bin/bash -g container container; \
+    elif getent passwd 1000 >/dev/null; then \
+      OLD_USER="$(getent passwd 1000 | cut -d: -f1)"; \
+      usermod -l container "${OLD_USER}"; \
+      usermod -d /home/container -m -s /bin/bash -g container container; \
+    else \
+      useradd -m -u 1000 -g container -s /bin/bash container; \
+    fi; \
+    echo "container ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/container; \
+    chmod 0440 /etc/sudoers.d/container; \
+    mkdir -p /home/container; \
+    chown -R container:container /home/container /usr/local/nvm /opt/pytools
 
 COPY scripts/aka-runtime.sh /etc/profile.d/aka-runtime.sh
 COPY scripts/aka-info /usr/local/bin/aka-info
