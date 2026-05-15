@@ -1,5 +1,5 @@
 {
-    "_comment": "Aka Multi Terminal Egg",
+    "_comment": "DO NOT EDIT: FILE GENERATED FOR AKA MULTI TERMINAL - PTERODACTYL PTDL_v2",
     "meta": {
         "version": "PTDL_v2",
         "update_url": "https://raw.githubusercontent.com/akaanakbaik/egg-multi-terminal/main/egg-aka-multi-terminal.json"
@@ -7,8 +7,17 @@
     "exported_at": "2026-05-15T00:00:00+07:00",
     "name": "Aka Multi Terminal",
     "author": "akaanakbaik17@proton.me",
-    "description": "Multi terminal egg untuk menjalankan bot dan web dengan Node.js, Python, PHP, C/C++, Java, Go, Bun, Deno, PM2, dan Cloudflare Tunnel.",
-    "features": null,
+    "description": "AKA MULTI TERMINAL FOR PTERODACTYL\r\n\r\nUniversal terminal egg untuk bot, website, API, scraper, compiler, dan tunnel.\r\n\r\nSupported runtimes:\r\n- Node.js 18, 20, 22, dan latest via NVM auto-switch\r\n- Bun latest\r\n- Deno latest\r\n- Python 3 + pip + venv + uv + poetry + pipenv\r\n- PHP CLI + Composer + ekstensi umum\r\n- C/C++ GCC/G++ + Clang + CMake + Make\r\n- Java 21\r\n- Go\r\n\r\nIncluded tools:\r\n- PM2, Nodemon, TypeScript, Vite\r\n- npm, pnpm, yarn\r\n- Git, curl, wget, jq, yq\r\n- cloudflared\r\n- FFmpeg, ImageMagick\r\n- tmux, screen, htop, network tools\r\n- SQLite, Redis CLI, PostgreSQL client, MySQL/MariaDB client\r\n\r\nFeatures:\r\n- Colorful terminal banner\r\n- Runtime version info on startup\r\n- Node.js version switch using NODE_VERSION\r\n- Smart startup detection with STARTUP_CMD=auto\r\n- Smart package manager detection\r\n- Optional dependency install on startup\r\n- Optional Git clone during install\r\n- User upload mode for File Manager/SFTP\r\n\r\nGitHub: github.com/akaanakbaik/egg-multi-terminal",
+    "features": [
+        "nodejs_auto_switch",
+        "multi_runtime",
+        "system_monitor",
+        "package_manager_detection",
+        "smart_startup_detection",
+        "auto_dependency_install",
+        "git_clone_install",
+        "colorful_terminal_ui"
+    ],
     "docker_images": {
         "Aka Multi Terminal - Nightly": "ghcr.io/akaanakbaik/egg-multi-terminal:nightly",
         "Aka Multi Terminal - Latest": "ghcr.io/akaanakbaik/egg-multi-terminal:latest"
@@ -17,13 +26,13 @@
     "startup": "bash",
     "config": {
         "files": "{}",
-        "startup": "{\n    \"done\": \"AKA_MULTI_TERMINAL_READY\"\n}",
+        "startup": "{\r\n    \"done\": \"AKA_MULTI_TERMINAL_READY\"\r\n}",
         "logs": "{}",
-        "stop": "exit"
+        "stop": "^^C"
     },
     "scripts": {
         "installation": {
-            "script": "#!/bin/bash\nmkdir -p /mnt/server\ncd /mnt/server\necho Ready\n",
+            "script": "#!/bin/bash\nset -e\napt-get update\napt-get install -y curl ca-certificates bash\ncurl -fsSL https://raw.githubusercontent.com/akaanakbaik/egg-multi-terminal/main/pterodactyl/install.sh -o /tmp/aka-install.sh\nbash /tmp/aka-install.sh\n",
             "container": "ubuntu:24.04",
             "entrypoint": "bash"
         }
@@ -31,7 +40,7 @@
     "variables": [
         {
             "name": "Startup Command",
-            "description": "Command yang dijalankan saat server start. Isi bash untuk terminal interaktif.",
+            "description": "Command utama saat server start. Gunakan bash untuk terminal interaktif, auto untuk deteksi otomatis, atau command langsung seperti node index.js, npm start, python3 main.py.",
             "env_variable": "STARTUP_CMD",
             "default_value": "bash",
             "user_viewable": true,
@@ -40,13 +49,83 @@
             "field_type": "text"
         },
         {
+            "name": "Node.js Version",
+            "description": "Versi Node.js saat startup. Contoh: 18, 20, 22, node, latest.",
+            "env_variable": "NODE_VERSION",
+            "default_value": "22",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|string|max:20",
+            "field_type": "text"
+        },
+        {
             "name": "Show Runtime Info",
-            "description": "Isi 1 untuk menampilkan banner dan versi runtime, 0 untuk sembunyikan.",
+            "description": "Tampilkan banner berwarna dan daftar versi runtime saat server start. Isi 1/true atau 0/false.",
             "env_variable": "AKA_SHOW_INFO",
             "default_value": "1",
             "user_viewable": true,
             "user_editable": true,
-            "rules": "required|boolean",
+            "rules": "required|string|in:true,false,1,0",
+            "field_type": "text"
+        },
+        {
+            "name": "Auto Install On Start",
+            "description": "Install dependency otomatis saat server start jika file dependency ditemukan.",
+            "env_variable": "AUTO_INSTALL_ON_START",
+            "default_value": "false",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string|in:true,false,1,0",
+            "field_type": "text"
+        },
+        {
+            "name": "Application Port",
+            "description": "Port aplikasi di dalam container untuk auto startup dan tunnel quick URL.",
+            "env_variable": "APP_PORT",
+            "default_value": "{{SERVER_PORT}}",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|string|max:10",
+            "field_type": "text"
+        },
+        {
+            "name": "Git Repository Address",
+            "description": "URL repo Git untuk auto deploy saat install. Kosongkan untuk terminal-only atau upload manual.",
+            "env_variable": "GIT_ADDRESS",
+            "default_value": "",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|string|max:255",
+            "field_type": "text"
+        },
+        {
+            "name": "Git Branch",
+            "description": "Branch repo yang akan di-clone. Contoh: main, master, production.",
+            "env_variable": "BRANCH",
+            "default_value": "",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|string|max:80",
+            "field_type": "text"
+        },
+        {
+            "name": "User Upload Mode",
+            "description": "Lewati git clone dan gunakan upload manual via File Manager/SFTP. Isi true/1 untuk mode upload manual.",
+            "env_variable": "USER_UPLOAD",
+            "default_value": "false",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string|in:true,false,1,0",
+            "field_type": "text"
+        },
+        {
+            "name": "Git Username",
+            "description": "Username Git untuk private repo. Kosongkan jika repo public.",
+            "env_variable": "USERNAME",
+            "default_value": "",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|string|max:100",
             "field_type": "text"
         }
     ]
