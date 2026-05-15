@@ -1,0 +1,71 @@
+#!/usr/bin/env bash
+set +e
+
+BOLD=$'\033[1m'
+DIM=$'\033[2m'
+RED=$'\033[31m'
+GREEN=$'\033[32m'
+YELLOW=$'\033[33m'
+BLUE=$'\033[34m'
+MAGENTA=$'\033[35m'
+CYAN=$'\033[36m'
+WHITE=$'\033[37m'
+RESET=$'\033[0m'
+
+hr() {
+  printf "%b\n" "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
+}
+
+ver() {
+  local name="$1"
+  shift
+  local value
+  value="$("$@" 2>&1 | head -n 1)"
+  if [[ -n "$value" ]]; then
+    printf "%b%-14s%b %s\n" "${YELLOW}" "$name" "${RESET}" "$value"
+  else
+    printf "%b%-14s%b tidak tersedia\n" "${YELLOW}" "$name" "${RESET}"
+  fi
+}
+
+clear 2>/dev/null || true
+printf "%b\n" "${MAGENTA}╔══════════════════════════════════════════════════════════╗${RESET}"
+printf "%b\n" "${MAGENTA}║${RESET} ${BOLD}${CYAN}AKA MULTI TERMINAL FOR PTERODACTYL${RESET} ${DIM}by aka${RESET}          ${MAGENTA}║${RESET}"
+printf "%b\n" "${MAGENTA}╚══════════════════════════════════════════════════════════╝${RESET}"
+printf "%bOwner%b      aka <akaanakbaik17@proton.me>\n" "${YELLOW}" "${RESET}"
+printf "%bImage%b      ghcr.io/akaanakbaik/egg-multi-terminal:nightly\n" "${YELLOW}" "${RESET}"
+printf "%bWorkdir%b    %s\n" "${YELLOW}" "${RESET}" "$(pwd)"
+printf "%bUser%b       %s\n" "${YELLOW}" "${RESET}" "$(whoami)"
+hr
+
+if [[ -s /usr/local/nvm/nvm.sh ]]; then
+  source /usr/local/nvm/nvm.sh
+  printf "%bNode NVM%b\n" "${GREEN}" "${RESET}"
+  nvm ls --no-colors | sed 's/^/  /' | head -n 12
+fi
+
+hr
+ver "Node" node -v
+ver "NPM" npm -v
+ver "PM2" pm2 -v
+ver "Python" python3 --version
+ver "PIP" pip3 --version
+ver "PHP" php -v
+ver "Composer" composer --version
+ver "G++" g++ --version
+ver "Clang++" clang++ --version
+ver "Java" java -version
+ver "Go" go version
+ver "Bun" bun --version
+ver "Deno" deno --version
+ver "Cloudflared" cloudflared --version
+ver "Git" git --version
+hr
+printf "%bCommand cepat%b\n" "${GREEN}" "${RESET}"
+printf "  %bn18 / n20 / n22 / nlatest%b  ganti versi Node di shell aktif\n" "${CYAN}" "${RESET}"
+printf "  %bnode18 app.js%b              jalanin file dengan Node 18\n" "${CYAN}" "${RESET}"
+printf "  %bpm2 start index.js%b         run bot/web background\n" "${CYAN}" "${RESET}"
+printf "  %bcloudflared tunnel --url http://localhost:3000%b\n" "${CYAN}" "${RESET}"
+printf "  %baka-help%b                   lihat contoh command\n" "${CYAN}" "${RESET}"
+hr
+printf "%bAKA_MULTI_TERMINAL_READY%b\n" "${GREEN}" "${RESET}"
